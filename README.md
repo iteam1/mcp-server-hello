@@ -12,7 +12,7 @@ uv venv
 source .venv/bin/activate
 
 # Install dependencies
-uv add "mcp[cli]" httpx
+uv add "mcp[cli]" httpx click black
 ```
 
 To run MCP server:
