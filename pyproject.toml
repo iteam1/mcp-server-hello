@@ -8,3 +8,10 @@ dependencies = [
     "httpx>=0.28.1",
     "mcp[cli]>=1.17.0",
 ]
+
+[project.scripts]
+mcp-server-hello = "mcp_server_hello.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
