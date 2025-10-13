@@ -20,7 +20,7 @@ To run MCP server:
 uv run mcp-server-hello
 ```
 
-To configure server in Claude Desktop or other MCP clients:
+Windsurl IDE local configuration:
 
 ```json
 {
@@ -33,6 +33,17 @@ To configure server in Claude Desktop or other MCP clients:
         "run",
         "mcp-server-hello"
       ]
+    }
+  }
+}
+```
+Windsurl IDE remote configuration:
+
+```json
+{
+  "mcpServers": {
+    "hello": {
+      "serverUrl": "http://localhost:8000/sse"
     }
   }
 }
