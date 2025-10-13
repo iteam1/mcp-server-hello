@@ -1,9 +1,13 @@
 import random
-from mcp.server.fastmcp import FastMCP
+import click
+import anyio
+import mcp.types as types
+from mcp.server.lowlevel import Server
+from mcp.server.lowlevel.helper_types import ReadResourceContents
+from pydantic import AnyUrl
+from typing import Any
 
-# Initialize FastMCP server
-mcp = FastMCP("mcp-server-hello")
-
+# Define constants
 jokes = [
     "Why don't scientists trust atoms? Because they make up everything!",
     "Why did the scarecrow win an award? Because he was outstanding in his field!",
@@ -22,59 +26,206 @@ roasts = [
     "Did you just console.log a secret? Bold move.",
 ]
 
-@mcp.tool("hello")
+
+# Define functions
 def say_hello(name: str) -> str:
-    """
-    Greet the user
-    Args:
-        name (str): The name of the user
-    Returns:
-        str: A greeting message
-    """
     return f"Hello, {name}!"
 
-@mcp.tool("compliment")
+
+def say_bye(name: str) -> str:
+    return f"Goodbye, {name}! See you later!"
+
+
 def give_compliment(name: str) -> str:
-    """
-    Give a random compliment to the user
-    Args:
-        name (str): The name of the user
-    Returns:
-        str: A compliment message
-    """
     compliment = random.choice(compliments)
     return f"Hey {name}, {compliment}"
 
-@mcp.tool("roast")
+
 def give_roast(name: str) -> str:
-    """
-    Give a playful roast to the user
-    Args:
-        name (str): The name of the user
-    Returns:
-        str: A roast message
-    """
     roast = random.choice(roasts)
     return f"Hey {name}, {roast}"
 
-@mcp.resource("jokes://random")
-def get_joke() -> str:
-    """
-    Get a random joke
-    Returns:
-        str: A random joke
-    """
-    return random.choice(jokes)
 
-@mcp.resource("jokes://all")
-def get_all_jokes() -> list[str]:
-    """
-    Get all jokes
-    Returns:
-        list[str]: A list of jokes
-    """
-    return jokes
+# Define CLI
+@click.command()
+@click.option("--port", default=8000, help="Port to listen on for SSE")
+@click.option(
+    "--transport",
+    type=click.Choice(["stdio", "sse"]),
+    default="stdio",
+    help="Transport type",
+)
+def main(port: int, transport: str) -> int:
 
-def main():
-    # Initialize and run the server
-    mcp.run(transport='stdio')
+    # Define server
+    app = Server("mcp-server-hello")
+
+    # Define tools
+    @app.list_tools()
+    async def list_tools() -> list[types.Tool]:
+        return [
+            types.Tool(
+                name="hello",
+                title="Hello",
+                description="Says hello to a person",
+                inputSchema={
+                    "type": "object",
+                    "required": ["name"],
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Name of the person to greet",
+                        }
+                    },
+                },
+            ),
+            types.Tool(
+                name="bye",
+                title="Bye",
+                description="Says goodbye to a person",
+                inputSchema={
+                    "type": "object",
+                    "required": ["name"],
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Name of the person to say goodbye to",
+                        }
+                    },
+                },
+            ),
+            types.Tool(
+                name="compliment",
+                title="Compliment",
+                description="Gives a random compliment to a person",
+                inputSchema={
+                    "type": "object",
+                    "required": ["name"],
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Name of the person to compliment",
+                        }
+                    },
+                },
+            ),
+            types.Tool(
+                name="roast",
+                title="Roast",
+                description="Gives a playful roast to a person",
+                inputSchema={
+                    "type": "object",
+                    "required": ["name"],
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Name of the person to roast",
+                        }
+                    },
+                },
+            ),
+        ]
+
+    @app.call_tool()
+    async def fetch_tool(
+        name: str, arguments: dict[str, Any]
+    ) -> list[types.ContentBlock]:
+        if name == "hello":
+            if "name" not in arguments:
+                raise ValueError("Missing name")
+            message = say_hello(arguments["name"])
+        elif name == "bye":
+            if "name" not in arguments:
+                raise ValueError("Missing name")
+            message = say_bye(arguments["name"])
+        elif name == "compliment":
+            if "name" not in arguments:
+                raise ValueError("Missing name")
+            message = give_compliment(arguments["name"])
+        elif name == "roast":
+            if "name" not in arguments:
+                raise ValueError("Missing name")
+            message = give_roast(arguments["name"])
+        else:
+            raise ValueError(f"Unknown tool: {name}")
+
+        return [{"type": "text", "text": message}]
+
+    # Define resources
+    @app.list_resources()
+    async def list_resources() -> list[types.Resource]:
+        return [
+            types.Resource(
+                uri="jokes://random",
+                name="Random Joke",
+                description="Get a random joke",
+                mimeType="text/plain",
+            ),
+            types.Resource(
+                uri="jokes://all",
+                name="All Jokes",
+                description="Get all jokes",
+                mimeType="application/json",
+            ),
+        ]
+
+    @app.read_resource()
+    async def read_resource(uri: AnyUrl):
+        uri_str = str(uri)
+        if uri_str == "jokes://random":
+            return [
+                ReadResourceContents(
+                    content=random.choice(jokes), mime_type="text/plain"
+                )
+            ]
+        elif uri_str == "jokes://all":
+            import json
+
+            return [
+                ReadResourceContents(
+                    content=json.dumps(jokes), mime_type="application/json"
+                )
+            ]
+        else:
+            raise ValueError(f"Unknown resource: {uri_str}")
+
+    # Define server transport
+    if transport == "sse":
+        from mcp.server.sse import SseServerTransport
+        from starlette.applications import Starlette
+        from starlette.requests import Request
+        from starlette.responses import Response
+        from starlette.routing import Mount, Route
+
+        sse = SseServerTransport("/messages/")
+
+        async def handle_sse(request: Request):
+            async with sse.connect_sse(request.scope, request.receive, request._send) as streams:  # type: ignore[reportPrivateUsage]
+                await app.run(
+                    streams[0], streams[1], app.create_initialization_options()
+                )
+            return Response()
+
+        starlette_app = Starlette(
+            debug=True,
+            routes=[
+                Route("/sse", endpoint=handle_sse, methods=["GET"]),
+                Mount("/messages/", app=sse.handle_post_message),
+            ],
+        )
+
+        import uvicorn
+
+        uvicorn.run(starlette_app, host="127.0.0.1", port=port)
+    else:
+        from mcp.server.stdio import stdio_server
+
+        async def arun():
+            async with stdio_server() as streams:
+                await app.run(
+                    streams[0], streams[1], app.create_initialization_options()
+                )
+
+        anyio.run(arun)
+
+    return 0
