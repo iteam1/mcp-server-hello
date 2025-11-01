@@ -51,7 +51,7 @@ def give_roast(name: str) -> str:
 @click.option("--port", default=8000, help="Port to listen on for SSE")
 @click.option(
     "--transport",
-    type=click.Choice(["stdio", "sse"]),
+    type=click.Choice(["stdio", "sse", "streamable-http"]),
     default="stdio",
     help="Transport type",
 )
@@ -213,6 +213,48 @@ def main(port: int, transport: str) -> int:
                 Mount("/messages/", app=sse.handle_post_message),
             ],
         )
+
+        import uvicorn
+
+        uvicorn.run(starlette_app, host="127.0.0.1", port=port)
+    elif transport == "streamable-http":
+        from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+        from starlette.applications import Starlette
+        from starlette.middleware.cors import CORSMiddleware
+        import contextlib
+
+        # Create session manager
+        session_manager = StreamableHTTPSessionManager(app=app)
+
+        # Lifespan context manager
+        @contextlib.asynccontextmanager 
+        async def lifespan(starlette_app: Starlette):
+            async with session_manager.run():
+                yield
+
+        # Create Starlette application
+        starlette_app = Starlette(debug=True, lifespan=lifespan)
+
+        # Add CORS middleware
+        starlette_app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
+        # Create ASGI application wrapper for session manager  
+        class MCPASGIApp:
+            def __init__(self, session_manager):
+                self.session_manager = session_manager
+                
+            async def __call__(self, scope, receive, send):
+                await self.session_manager.handle_request(scope, receive, send)
+
+        # Mount the MCP ASGI app
+        mcp_app = MCPASGIApp(session_manager)
+        starlette_app.mount("/mcp", mcp_app)
 
         import uvicorn
 

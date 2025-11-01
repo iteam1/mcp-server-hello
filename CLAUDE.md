@@ -23,6 +23,11 @@ uv run mcp-server-hello
 uv run mcp-server-hello --transport sse --port 8080
 ```
 
+**Run with Streamable HTTP transport (recommended for production):**
+```bash
+uv run mcp-server-hello --transport streamable-http --port 8080
+```
+
 **Format code:**
 ```bash
 black mcp_server_hello/
@@ -41,9 +46,10 @@ black mcp_server_hello/
 
 ### Transport Architecture
 
-The server supports two transport modes:
+The server supports three transport modes:
 - **stdio**: Direct MCP protocol communication for local clients
 - **SSE**: HTTP-based transport using Starlette web framework with SSE endpoints at `/sse` and `/messages/`
+- **streamable-http**: Modern HTTP transport with single endpoint `/mcp` (recommended for production)
 
 ### Tool Pattern
 
@@ -78,6 +84,17 @@ Resources use custom URI scheme "jokes://" with two endpoints:
   "mcpServers": {
     "hello": {
       "serverUrl": "http://localhost:8000/sse"
+    }
+  }
+}
+```
+
+**Windsurl IDE remote config (Streamable HTTP):**
+```json
+{
+  "mcpServers": {
+    "hello": {
+      "serverUrl": "http://localhost:8000/mcp"
     }
   }
 }
