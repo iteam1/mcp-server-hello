@@ -227,7 +227,7 @@ def main(port: int, transport: str) -> int:
         session_manager = StreamableHTTPSessionManager(app=app)
 
         # Lifespan context manager
-        @contextlib.asynccontextmanager 
+        @contextlib.asynccontextmanager
         async def lifespan(starlette_app: Starlette):
             async with session_manager.run():
                 yield
@@ -244,11 +244,11 @@ def main(port: int, transport: str) -> int:
             allow_headers=["*"],
         )
 
-        # Create ASGI application wrapper for session manager  
+        # Create ASGI application wrapper for session manager
         class MCPASGIApp:
             def __init__(self, session_manager):
                 self.session_manager = session_manager
-                
+
             async def __call__(self, scope, receive, send):
                 await self.session_manager.handle_request(scope, receive, send)
 
