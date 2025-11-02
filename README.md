@@ -57,6 +57,23 @@ Windsurl IDE remote configuration:
 }
 ```
 
+Claude code integration:
+
+```bash
+# STDIO
+claude mcp add-json hello '{"type":"stdio","command":"uv","args":["--directory","/home/locch/Works/mcp-server-hello","run","mcp-server-hello"]}'
+
+# SSE
+claude mcp add-json mcp-hello-sse '{"type":"sse","url":"http://localhost:8080/sse"}'
+# Or with authentication
+claude mcp add-json mcp-hello-sse '{"type":"sse","url":"http://localhost:8080/sse","headers":{"Authorization":"Bearer your-token","X-API-Key":"your-key"}}'
+
+# STREAMALBE-HTTP
+claude mcp add-json mcp-hello-sse '{"type":"sse","url":"http://localhost:8080/sse","headers":{"Authorization":"Bearer your-token","X-API-Key":"your-key"}}'
+claude mcp add-json mcp-hello-http '{"type":"http","url":"http://localhost:8080/mcp","headers":{"Authorization":"Bearer your-token","Content-Type":"application/json"}}'
+```
+
+
 **Note:** To apply the changes in your code, just save and reload the configuration in Windsurl IDE.
 
 **Note:** `mcp_server_hello/__main__.py` is the entry point allow you to run the server with `uv run mcp-server-hello` without installing the package.
