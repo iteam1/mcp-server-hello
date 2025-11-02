@@ -27,7 +27,7 @@ roasts = [
 ]
 
 
-# Define functions
+# Tools
 def say_hello(name: str) -> str:
     return f"Hello, {name}!"
 
@@ -44,6 +44,55 @@ def give_compliment(name: str) -> str:
 def give_roast(name: str) -> str:
     roast = random.choice(roasts)
     return f"Hey {name}, {roast}"
+
+
+# Prompts
+def create_story_messages(
+    genre: str | None = None, setting: str | None = None, character: str | None = None
+) -> list[types.PromptMessage]:
+    messages = []
+
+    genre_part = f" {genre}" if genre else " mystery"
+    setting_part = f" set in {setting}" if setting else ""
+    character_part = f" featuring {character}" if character else ""
+
+    prompt = f"Write a creative short{genre_part} story{setting_part}{character_part}. Make it engaging with vivid descriptions and an interesting plot twist."
+
+    messages.append(
+        types.PromptMessage(
+            role="user", content=types.TextContent(type="text", text=prompt)
+        )
+    )
+
+    return messages
+
+
+def create_facts_messages(
+    topic: str | None = None, style: str | None = None, count: str | None = None
+) -> list[types.PromptMessage]:
+    messages = []
+
+    topic_part = f" about {topic}" if topic else ""
+    count_part = f" {count}" if count else " 5"
+    style_part = ""
+    if style == "fun":
+        style_part = " Present them in a fun and entertaining way."
+    elif style == "scientific":
+        style_part = " Present them with scientific accuracy and detail."
+    elif style == "surprising":
+        style_part = " Focus on surprising and lesser-known facts."
+    else:
+        style_part = " Present them in an interesting and engaging way."
+
+    prompt = f"Provide{count_part} fascinating facts{topic_part}.{style_part} Include sources or context where relevant to make the facts more credible and interesting."
+
+    messages.append(
+        types.PromptMessage(
+            role="user", content=types.TextContent(type="text", text=prompt)
+        )
+    )
+
+    return messages
 
 
 # Define CLI
@@ -188,6 +237,81 @@ def main(port: int, transport: str) -> int:
             ]
         else:
             raise ValueError(f"Unknown resource: {uri_str}")
+
+    # Define prompts
+    @app.list_prompts()
+    async def list_prompts() -> list[types.Prompt]:
+        return [
+            types.Prompt(
+                name="story",
+                title="Creative Story Generator",
+                description="Generate a creative short story with customizable genre, setting, and characters",
+                arguments=[
+                    types.PromptArgument(
+                        name="genre",
+                        description="Story genre (mystery, fantasy, sci-fi, romance, horror, etc.)",
+                        required=False,
+                    ),
+                    types.PromptArgument(
+                        name="setting",
+                        description="Story setting or location",
+                        required=False,
+                    ),
+                    types.PromptArgument(
+                        name="character",
+                        description="Main character description",
+                        required=False,
+                    ),
+                ],
+            ),
+            types.Prompt(
+                name="facts",
+                title="Fascinating Facts Generator",
+                description="Generate interesting facts about any topic with customizable style and count",
+                arguments=[
+                    types.PromptArgument(
+                        name="topic",
+                        description="Topic to get facts about",
+                        required=False,
+                    ),
+                    types.PromptArgument(
+                        name="style",
+                        description="Presentation style (fun, scientific, surprising)",
+                        required=False,
+                    ),
+                    types.PromptArgument(
+                        name="count",
+                        description="Number of facts to generate",
+                        required=False,
+                    ),
+                ],
+            ),
+        ]
+
+    @app.get_prompt()
+    async def get_prompt(
+        name: str, arguments: dict[str, str] | None = None
+    ) -> types.GetPromptResult:
+        arguments = arguments or {}
+
+        if name == "story":
+            return types.GetPromptResult(
+                messages=create_story_messages(
+                    genre=arguments.get("genre"),
+                    setting=arguments.get("setting"),
+                    character=arguments.get("character"),
+                )
+            )
+        elif name == "facts":
+            return types.GetPromptResult(
+                messages=create_facts_messages(
+                    topic=arguments.get("topic"),
+                    style=arguments.get("style"),
+                    count=arguments.get("count"),
+                )
+            )
+        else:
+            raise ValueError(f"Unknown prompt: {name}")
 
     # Define server transport
     if transport == "sse":
