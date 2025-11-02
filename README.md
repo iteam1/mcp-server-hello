@@ -17,7 +17,15 @@ uv add "mcp[cli]" httpx click black
 
 To run MCP server:
 ```bash
+# stdio
 uv run mcp-server-hello
+
+# sse
+uv run mcp-server-hello --transport sse --port 8080
+
+
+# streamable-http
+uv run mcp-server-hello --transport streamable-http --port 8080
 ```
 
 Windsurl IDE local configuration:
