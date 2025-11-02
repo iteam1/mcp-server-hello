@@ -2,10 +2,10 @@ import random
 import click
 import anyio
 import mcp.types as types
+from typing import Any
+from pydantic import AnyUrl
 from mcp.server.lowlevel import Server
 from mcp.server.lowlevel.helper_types import ReadResourceContents
-from pydantic import AnyUrl
-from typing import Any
 
 # Define constants
 jokes = [
