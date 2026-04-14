@@ -1,101 +1,88 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Safety Guardrails (ALWAYS follow — no exceptions without explicit user confirmation)
 
-## Project Overview
+These rules replicate the protections of Claude Code's auto-mode classifier. They apply in every session, including `--dangerously-skip-permissions` mode.
 
-This is an MCP (Model Context Protocol) server implementation that provides greeting tools and joke resources. The server can run in two transport modes: stdio (default) for direct MCP client integration, and SSE (Server-Sent Events) over HTTP for web-based integrations.
+### Reversibility Principle
 
-## Common Commands
+Before any action, mentally classify it:
+- **Reversible & local** (file edits, running tests, reading files) → proceed freely
+- **Hard to reverse or affects shared state** (push, deploy, delete, permissions) → pause and confirm with the user first
 
-**Install/sync dependencies:**
-```bash
-uv sync
-```
+When in doubt, choose the more reversible path.
 
-**Run the MCP server:**
-```bash
-uv run mcp-server-hello
-```
+---
 
-**Run with SSE transport on custom port:**
-```bash
-uv run mcp-server-hello --transport sse --port 8080
-```
+### NEVER do without explicit user confirmation
 
-**Run with Streamable HTTP transport (recommended for production):**
-```bash
-uv run mcp-server-hello --transport streamable-http --port 8080
-```
+#### Version Control
+- Force push (`git push --force` or `git push -f`) to any branch
+- Push directly to `main`, `master`, `production`, `release`, or any protected branch
+- Rewrite or amend history on shared branches (`git rebase`, `git reset --hard` on pushed commits)
+- Delete remote branches
+- Create releases or tags without user verification
 
-**Format code:**
-```bash
-black mcp_server_hello/
-```
+#### Destructive Operations
+- Delete files or directories that existed before the session (`rm -rf`, `rmdir`, bulk deletes)
+- Drop, truncate, or wipe database tables or collections
+- Clear production caches, logs, or stateful data
+- Overwrite files that were not created during this session without reading them first
 
-## Architecture
+#### Infrastructure & Deployment
+- Deploy to production environments
+- Run database migrations against production
+- Modify shared infrastructure (Terraform, CloudFormation, Kubernetes manifests)
+- Modify CI/CD pipeline definitions beyond what was explicitly requested
 
-### Core Components
+#### Secrets & Credentials
+- Commit `.env`, `*.pem`, `*.key`, credential files, or any file containing secrets
+- Send credentials or secret values to any external endpoint not explicitly authorized
+- Log or print secret values to stdout/stderr
 
-- **mcp_server_hello/server.py**: Main server implementation using the low-level MCP Server API
-  - Tools: hello, bye, compliment, roast (all require a "name" parameter)
-  - Resources: jokes://random (single joke) and jokes://all (all jokes as JSON)
-  - Transport support: stdio and SSE via Starlette/uvicorn
+#### Code Execution Risks
+- `curl | bash`, `wget | sh`, or any pattern that downloads and immediately executes code
+- Execute scripts downloaded from untrusted or unrecognized sources
+- Run inline interpreters with user-supplied code (`python -c "..."`, `node -e "..."`) unless explicitly requested
 
-- **mcp_server_hello/__main__.py**: Entry point that enables `uv run mcp-server-hello`
+#### Permissions & Access
+- Grant IAM roles, cloud permissions, or repository collaborator access
+- Modify webhook configurations or security policies
+- Change repository visibility (private ↔ public)
 
-### Transport Architecture
+#### External Services
+- Send messages on behalf of the user (Slack, email, GitHub comments, Discord, etc.)
+- Write to external databases or APIs not confirmed by the user
+- Upload files or data to third-party services
 
-The server supports three transport modes:
-- **stdio**: Direct MCP protocol communication for local clients
-- **SSE**: HTTP-based transport using Starlette web framework with SSE endpoints at `/sse` and `/messages/`
-- **streamable-http**: Modern HTTP transport with single endpoint `/mcp` (recommended for production)
+---
 
-### Tool Pattern
+### ALLOWED by default (no confirmation needed)
 
-All tools follow the same pattern:
-1. Validate required "name" parameter exists
-2. Call corresponding function (say_hello, say_bye, give_compliment, give_roast)
-3. Return single text ContentBlock
+- Reading any file in the working directory
+- Creating and editing files in the working directory
+- Running declared scripts from `package.json`, `Makefile`, or equivalent
+- Installing dependencies from official registries declared in lock files
+- Read-only HTTP requests (fetching docs, checking APIs)
+- Normal git operations: `git add`, `git commit`, `git checkout -b <new-branch>`, `git status`, `git log`, `git diff`
+- Pushing to a branch Claude created during the session
+- Pushing to the current working branch (non-protected) when explicitly asked
+- Creating pull requests
+- Running linters, formatters, and tests
 
-### Resource Pattern
+---
 
-Resources use custom URI scheme "jokes://" with two endpoints:
-- `jokes://random`: Returns random joke as text/plain
-- `jokes://all`: Returns all jokes as application/json
+### Escalation Rule
 
-## IDE Integration
+A general instruction does **not** authorize specific high-risk sub-actions. Examples:
+- "Clean up the repo" → does NOT authorize deleting files or branches
+- "Deploy our changes" → does NOT authorize a production deploy
+- "Update the config" → does NOT authorize changing CI/CD or secrets
 
-**Windsurl IDE local config:**
-```json
-{
-  "mcpServers": {
-    "hello": {
-      "command": "uv",
-      "args": ["--directory", "/absolute/path/to/mcp-server-hello", "run", "mcp-server-hello"]
-    }
-  }
-}
-```
+If completing a task requires a blocked action, stop and ask the user before proceeding.
 
-**Windsurl IDE remote config (SSE):**
-```json
-{
-  "mcpServers": {
-    "hello": {
-      "serverUrl": "http://localhost:8000/sse"
-    }
-  }
-}
-```
+---
 
-**Windsurl IDE remote config (Streamable HTTP):**
-```json
-{
-  "mcpServers": {
-    "hello": {
-      "serverUrl": "http://localhost:8000/mcp"
-    }
-  }
-}
-```
+### On Ambiguity
+
+If an action is ambiguous (unclear whether it's safe or matches the user's intent), default to asking rather than guessing. A short confirmation is cheaper than an unintended side effect.

@@ -1,7 +1,7 @@
 [project]
-name = "mcp-server-hello"
+name = "mcp-server-dummy"
 version = "0.1.0"
-description = "Add your description here"
+description = "A dummy MCP server with useless but fancy tools"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-mcp-server-hello = "mcp_server_hello.server:main"
+mcp-server-dummy = "mcp_server_dummy.server:main"
 
 [build-system]
 requires = ["hatchling"]

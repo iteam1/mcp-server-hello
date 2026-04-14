@@ -1,85 +1,92 @@
-# mcp-server-hello
+# mcp-server-dummy
 
-To setup:
+A dummy MCP server. Useless, but fancy.
+
+## Setup
 
 ```bash
-# Create a new directory for our project
-uv init <project_name>
-cd <project_name>
-
-# Create virtual environment and activate it
 uv venv
 source .venv/bin/activate
-
-# Install dependencies
-uv add "mcp[cli]" httpx click black
+uv add "mcp[cli]" httpx click
 ```
 
-To run MCP server:
+## Run
+
 ```bash
-# stdio
-uv run mcp-server-hello
+# stdio (default)
+uv run mcp-server-dummy
 
-# sse
-uv run mcp-server-hello --transport sse --port 8080
+# SSE
+uv run mcp-server-dummy --transport sse --port 8080
 
-
-# streamable-http
-uv run mcp-server-hello --transport streamable-http --port 8080
+# Streamable HTTP
+uv run mcp-server-dummy --transport streamable-http --port 8080
 ```
 
-Windsurl IDE local configuration:
+## Features
 
-```json
-{
-  "mcpServers": {
-    "hello": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "/absolute/path/to/mcp-server-hello",
-        "run",
-        "mcp-server-hello"
-      ]
-    }
-  }
-}
-```
-Windsurl IDE remote configuration:
+### Tools
+| Tool | Description |
+|---|---|
+| `ping` | Responds with pong. Optionally echoes a message. |
+| `echo` | Repeats back exactly what you send. |
+| `lie` | Returns a confident, completely made-up fact. |
+| `excuse` | Generates a professional excuse for any situation. |
+| `vibe_check` | Scientifically measures a person's vibe score out of 100. |
+| `motivate` | Delivers a hollow but enthusiastic motivational message. |
 
-```json
-{
-  "mcpServers": {
-    "hello": {
-      "serverUrl": "http://localhost:8000/sse"
-    }
-  }
-}
-```
+### Resources
+| URI | Description |
+|---|---|
+| `dummy://status` | Current system status. Always reassuring. |
+| `dummy://lorem` | Placeholder text, weird edition. |
+| `dummy://advice` | Unsolicited life advice of dubious quality. |
 
-**Note:** To apply the changes in your code, just save and reload the configuration in Windsurl IDE.
+### Prompts
+| Prompt | Description |
+|---|---|
+| `nonsense` | Generate corporate-sounding gibberish about any topic. |
+| `overengineer` | Explain something simple as a distributed systems nightmare. |
 
-
-Claude code integration:
+## Claude Code Integration
 
 ```bash
 # STDIO
-claude mcp add-json hello '{"type":"stdio","command":"uv","args":["--directory","/home/locch/Works/mcp-server-hello","run","mcp-server-hello"]}'
+claude mcp add-json dummy '{"type":"stdio","command":"uv","args":["--directory","/path/to/mcp-server-dummy","run","mcp-server-dummy"]}'
 
 # SSE
-claude mcp add-json mcp-hello-sse '{"type":"sse","url":"http://localhost:8080/sse"}'
-# Or with authentication
-claude mcp add-json mcp-hello-sse '{"type":"sse","url":"http://localhost:8080/sse","headers":{"Authorization":"Bearer your-token","X-API-Key":"your-key"}}'
+claude mcp add-json mcp-dummy-sse '{"type":"sse","url":"http://localhost:8080/sse"}'
 
-# STREAMALBE-HTTP
-claude mcp add-json mcp-hello-http '{"type":"http","url":"http://localhost:8080/mcp"}'
-claude mcp add-json mcp-hello-http '{"type":"http","url":"http://localhost:8080/mcp","headers":{"Authorization":"Bearer your-token","Content-Type":"application/json"}}'
+# Streamable HTTP
+claude mcp add-json mcp-dummy-http '{"type":"http","url":"http://localhost:8080/mcp"}'
 ```
 
-**Note:** `mcp_server_hello/__main__.py` is the entry point allow you to run the server with `uv run mcp-server-hello` without installing the package.
+## Windsurf IDE
+
+Local:
+```json
+{
+  "mcpServers": {
+    "dummy": {
+      "command": "uv",
+      "args": ["--directory", "/absolute/path/to/mcp-server-dummy", "run", "mcp-server-dummy"]
+    }
+  }
+}
+```
+
+Remote:
+```json
+{
+  "mcpServers": {
+    "dummy": {
+      "serverUrl": "http://localhost:8080/sse"
+    }
+  }
+}
+```
 
 ## References
 
-- [Official Doc](https://modelcontextprotocol.io/docs/getting-started/intro)
+- [MCP Docs](https://modelcontextprotocol.io/docs/getting-started/intro)
 - [Python SDK](https://github.com/modelcontextprotocol/python-sdk)
-- [Servers](https://github.com/modelcontextprotocol/servers)
